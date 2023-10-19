@@ -43,7 +43,12 @@ h1 {
   padding: 2rem;
   text-align: center;
 }
-
+canvas {
+  border-radius: 8%;
+  border: #747bff;
+  background-color: #f9f9f9;
+  filter: drop-shadow(25px 25px 25px #000000);
+}
 button {
   border-radius: 8px;
   border: 1px solid transparent;
