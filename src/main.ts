@@ -1,108 +1,117 @@
 import "./style.css";
 
+function somethingChanged() {
+  const drawingChangedEvent = new Event("drawing-changed");
+  canvas.dispatchEvent(drawingChangedEvent);
+}
+
 function draw(event: MouseEvent) {
-  if (drawing) {
-    ctx!.lineWidth = 1.5;
-    ctx!.lineCap = "round";
-    ctx!.strokeStyle = "black";
+  ctx.lineWidth = 1;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "black";
 
-    console.log(
-      event.clientX - canvas.offsetLeft,
-      event.clientY - canvas.offsetTop
-    );
-    currentStroke.push([
-      event.clientX - canvas.offsetLeft,
-      event.clientY - canvas.offsetTop,
-    ]);
+  currentStroke.push({
+    xPos: event.offsetX,
+    yPos: event.offsetY,
+  });
+  somethingChanged();
+}
 
-    const newLineEvent = new Event("newLine");
-    canvas.dispatchEvent(newLineEvent);
-  }
+function redraw() {
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  penStrokes.forEach((stroke) => {
+    if (stroke.length > 1) {
+      ctx.beginPath();
+      stroke.forEach((point) => {
+        ctx.lineTo(point.xPos, point.yPos);
+        ctx.stroke();
+      });
+    }
+  });
+}
+
+function undo() {
+  if (penStrokes.length < 1) return;
+  redoStack.push(penStrokes.pop()!);
+  somethingChanged();
+}
+
+function redo() {
+  if (redoStack.length < 1) return;
+  penStrokes.push(redoStack.pop()!);
+  somethingChanged();
 }
 
 const app: HTMLDivElement = document.querySelector("#app")!;
+
 const gameName = "Doodle Machine";
 document.title = gameName;
 const header = document.createElement("h1");
 header.innerHTML = gameName;
 
-//Canvas stats
-const width = 256;
-const height = 256;
-
+const canvasWidth = 256;
+const canvasHeight = 256;
 const canvas = document.createElement("canvas");
-
-canvas.width = width;
-canvas.height = height;
-const ctx = canvas.getContext("2d");
-
-ctx!.fillStyle = "lightpink";
-
-ctx?.fillRect(0, 0, width, height);
-
-//const cursor = { active: false, x: 0, y: 0 };
-
-//const paths = [];
+canvas.id = "myCanvas";
+canvas.width = canvasWidth;
+canvas.height = canvasHeight;
+const ctx = canvas.getContext("2d")!;
+ctx.fillStyle = "lightpink";
+ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
 const clearButton: HTMLButtonElement = document.createElement("button");
 clearButton.innerText = "Clear";
+clearButton.classList.add("button-container");
 
 clearButton.addEventListener("click", () => {
-  ctx!.fillStyle = "lightpink";
-  ctx?.fillRect(0, 0, width, height);
+  penStrokes.length = 0;
+  currentStroke = [];
+  redoStack.length = 0;
+  somethingChanged();
+});
 
-  penStrokes.length = 0; //clear stroke history
-  currentStroke.length = 0;
-  penStrokes.push(currentStroke);
+const undoButton: HTMLButtonElement = document.createElement("button");
+undoButton.innerText = "Undo";
+undoButton.classList.add("button-container");
+undoButton.addEventListener("click", () => {
+  undo();
+});
+
+const redoButton: HTMLButtonElement = document.createElement("button");
+redoButton.innerText = "Redo";
+redoButton.classList.add("button-container");
+redoButton.addEventListener("click", () => {
+  redo();
 });
 
 let drawing = false;
-const penStrokes: number[][][] = [];
-const currentStroke: number[][] = [];
-penStrokes.push(currentStroke);
+const penStrokes: { xPos: number; yPos: number }[][] = [];
+let currentStroke: { xPos: number; yPos: number }[] = [];
+const redoStack: { xPos: number; yPos: number }[][] = [];
 
-document.addEventListener("mousedown", () => {
-  console.log("down");
+canvas.addEventListener("mousedown", (event) => {
   drawing = true;
-  ctx?.beginPath();
+  currentStroke = [];
+  penStrokes.push(currentStroke);
+  redoStack.splice(0, redoStack.length);
+  currentStroke.push({ xPos: event.offsetX, yPos: event.offsetY });
+  somethingChanged();
 });
-document.addEventListener("mouseup", () => {
-  console.log("up");
-  drawing = false;
-});
-canvas.addEventListener("mousemove", (e) => {
-  console.log("draw");
-  draw(e);
-  if (drawing) draw(e);
-});
-canvas.addEventListener("mouseleave", () => {
-  console.log("exit canvas");
-  penStrokes.push(currentStroke.slice()); // add current stroke to strokes array
-  currentStroke.length = 0;
-});
-
-canvas.addEventListener("newLine", () => {
-  ctx!.fillRect(0, 0, canvas.width, canvas.height);
-  penStrokes.forEach((stroke) => {
-    ctx!.beginPath();
-    stroke.forEach((point) => {
-      ctx!.lineTo(point[0], point[1]);
-      ctx!.stroke();
-    });
-  });
-});
-
-app.append(header, canvas, clearButton);
-
-/* function draw(x, y, color) {}
-
-addEventListener("mousedown", (event) => {
-  cursor.active = true;
-  cursor.x = event.offsetX;
-  cursor.y = event.offsetY;
-});
-
 canvas.addEventListener("mousemove", (event) => {
-  if (cursor.active) {
-  }
-}); */
+  if (drawing) draw(event);
+});
+canvas.addEventListener("mouseup", () => {
+  drawing = false;
+  currentStroke = [];
+});
+
+canvas.addEventListener("mouseleave", () => {
+  if (currentStroke.length > 0) penStrokes.push(currentStroke.slice());
+  currentStroke = [];
+});
+
+canvas.addEventListener("drawing-changed", () => {
+  redraw();
+});
+
+app.append(header, canvas, clearButton, undoButton, redoButton);
