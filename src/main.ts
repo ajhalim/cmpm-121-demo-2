@@ -6,17 +6,17 @@ function draw(event: MouseEvent) {
     ctx!.lineCap = "round";
     ctx!.strokeStyle = "black";
 
-    ctx!.lineTo(
+    console.log(
       event.clientX - canvas.offsetLeft,
       event.clientY - canvas.offsetTop
     );
-    ctx!.stroke();
+    currentStroke.push([
+      event.clientX - canvas.offsetLeft,
+      event.clientY - canvas.offsetTop,
+    ]);
 
-    ctx!.beginPath();
-    ctx!.moveTo(
-      event.clientX - canvas.offsetLeft,
-      event.clientY - canvas.offsetTop
-    );
+    const newLineEvent = new Event("newLine");
+    canvas.dispatchEvent(newLineEvent);
   }
 }
 
@@ -50,9 +50,16 @@ clearButton.innerText = "Clear";
 clearButton.addEventListener("click", () => {
   ctx!.fillStyle = "lightpink";
   ctx?.fillRect(0, 0, width, height);
+
+  penStrokes.length = 0; //clear stroke history
+  currentStroke.length = 0;
+  penStrokes.push(currentStroke);
 });
 
 let drawing = false;
+const penStrokes: number[][][] = [];
+const currentStroke: number[][] = [];
+penStrokes.push(currentStroke);
 
 document.addEventListener("mousedown", () => {
   console.log("down");
@@ -66,10 +73,23 @@ document.addEventListener("mouseup", () => {
 canvas.addEventListener("mousemove", (e) => {
   console.log("draw");
   draw(e);
+  if (drawing) draw(e);
 });
-canvas.addEventListener("mouseenter", () => {
-  console.log("enter canvas");
-  ctx?.beginPath();
+canvas.addEventListener("mouseleave", () => {
+  console.log("exit canvas");
+  penStrokes.push(currentStroke.slice()); // add current stroke to strokes array
+  currentStroke.length = 0;
+});
+
+canvas.addEventListener("newLine", () => {
+  ctx!.fillRect(0, 0, canvas.width, canvas.height);
+  penStrokes.forEach((stroke) => {
+    ctx!.beginPath();
+    stroke.forEach((point) => {
+      ctx!.lineTo(point[0], point[1]);
+      ctx!.stroke();
+    });
+  });
 });
 
 app.append(header, canvas, clearButton);
