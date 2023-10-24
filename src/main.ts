@@ -1,45 +1,41 @@
 import "./style.css";
 
+class drag {
+  points: { x: number; y: number }[];
+  length: number;
+
+  constructor(x?: number, y?: number) {
+    this.points = x && y ? [{ x, y }] : [];
+    this.length = x && y ? 1 : 0;
+  }
+  // copy constructor
+  copyFrom(original: drag) {
+    this.points = [...original.points];
+    this.length = original.length;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.lineWidth = 1;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "black";
+    const { x, y } = this.points[0];
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    for (const { x, y } of this.points) {
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  extend(x: number, y: number) {
+    this.points.push({ x, y });
+    this.length++;
+  }
+}
+
 function somethingChanged() {
   const drawingChangedEvent = new Event("drawing-changed");
   canvas.dispatchEvent(drawingChangedEvent);
-}
-
-function draw(event: MouseEvent) {
-  ctx.lineWidth = 1;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "black";
-
-  currentStroke.push({
-    xPos: event.offsetX,
-    yPos: event.offsetY,
-  });
-  somethingChanged();
-}
-
-function redraw() {
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  penStrokes.forEach((stroke) => {
-    if (stroke.length > 1) {
-      ctx.beginPath();
-      stroke.forEach((point) => {
-        ctx.lineTo(point.xPos, point.yPos);
-        ctx.stroke();
-      });
-    }
-  });
-}
-
-function undo() {
-  if (penStrokes.length < 1) return;
-  redoStack.push(penStrokes.pop()!);
-  somethingChanged();
-}
-
-function redo() {
-  if (redoStack.length < 1) return;
-  penStrokes.push(redoStack.pop()!);
-  somethingChanged();
 }
 
 const app: HTMLDivElement = document.querySelector("#app")!;
@@ -64,9 +60,8 @@ clearButton.innerText = "Clear";
 clearButton.classList.add("button-container");
 
 clearButton.addEventListener("click", () => {
-  penStrokes.length = 0;
-  currentStroke = [];
-  redoStack.length = 0;
+  actions = [];
+  redoStack = [];
   somethingChanged();
 });
 
@@ -74,44 +69,64 @@ const undoButton: HTMLButtonElement = document.createElement("button");
 undoButton.innerText = "Undo";
 undoButton.classList.add("button-container");
 undoButton.addEventListener("click", () => {
-  undo();
+  if (actions.length != null) {
+    redoStack.push(actions.pop()!);
+    somethingChanged();
+  } else {
+    return;
+  }
 });
 
 const redoButton: HTMLButtonElement = document.createElement("button");
 redoButton.innerText = "Redo";
 redoButton.classList.add("button-container");
 redoButton.addEventListener("click", () => {
-  redo();
+  if (actions.length != null) {
+    actions.push(redoStack.pop()!);
+    somethingChanged();
+  } else {
+    return;
+  }
 });
 
 let drawing = false;
-const penStrokes: { xPos: number; yPos: number }[][] = [];
+/* const penStrokes: { xPos: number; yPos: number }[][] = [];
 let currentStroke: { xPos: number; yPos: number }[] = [];
-const redoStack: { xPos: number; yPos: number }[][] = [];
+const redoStack: { xPos: number; yPos: number }[][] = []; */
+
+let actions: drag[] = [];
+let redoStack: drag[] = [];
 
 canvas.addEventListener("mousedown", (event) => {
   drawing = true;
-  currentStroke = [];
-  penStrokes.push(currentStroke);
+
   redoStack.splice(0, redoStack.length);
-  currentStroke.push({ xPos: event.offsetX, yPos: event.offsetY });
+  actions.push(new drag(event.offsetX, event.offsetY));
   somethingChanged();
 });
 canvas.addEventListener("mousemove", (event) => {
-  if (drawing) draw(event);
+  if (drawing) {
+    actions[actions.length - 1].extend(event.offsetX, event.offsetY);
+    actions[actions.length - 1].display(ctx);
+    redoStack = [];
+  }
 });
 canvas.addEventListener("mouseup", () => {
   drawing = false;
-  currentStroke = [];
+  //currentStroke = [];
 });
 
 canvas.addEventListener("mouseleave", () => {
-  if (currentStroke.length > 0) penStrokes.push(currentStroke.slice());
-  currentStroke = [];
+  drawing = false;
 });
 
 canvas.addEventListener("drawing-changed", () => {
-  redraw();
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  actions.forEach((line) => {
+    if (line.length != null) {
+      line.display(ctx);
+    }
+  });
 });
 
 app.append(header, canvas, clearButton, undoButton, redoButton);
