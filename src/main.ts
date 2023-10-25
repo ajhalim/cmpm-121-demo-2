@@ -38,10 +38,44 @@ class drag {
   }
 }
 
+class CursorComand {
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  constructor(x: number, y: number, size: number, color: string) {
+    this.x = x;
+    this.y = y;
+    this.size = size * 4;
+    this.color = color;
+  }
+  display(ctx: CanvasRenderingContext2D) {
+    const originalFillStyle = ctx.fillStyle;
+    ctx.fillStyle = this.color;
+    ctx.font = `${Math.max(7, this.size)}px monospace`;
+    if (this.size <= 4) {
+      ctx.fillText("+", this.x - 2, this.y + 3);
+    } else {
+      ctx.fillText("+", this.x - 8, this.y + 3);
+    }
+    ctx.fillStyle = originalFillStyle;
+  }
+}
+
 function somethingChanged() {
   const drawingChangedEvent = new Event("drawing-changed");
   canvas.dispatchEvent(drawingChangedEvent);
 }
+
+/* function redraw() {
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  actions.forEach((line) => {
+    if (line.length) {
+      line.display(ctx);
+    }
+  });
+  if (cursorComand) cursorComand.display(ctx);
+} */
 
 const app: HTMLDivElement = document.querySelector("#app")!;
 
@@ -82,6 +116,7 @@ let actions: drag[] = [];
 let redoStack: drag[] = [];
 let penColor = "black";
 const colors = ["black", "red", "blue", "green", "orange", "white", "yellow"];
+let cursorComand: CursorComand | null = null;
 
 const clearButton: HTMLButtonElement = document.createElement("button");
 clearButton.innerText = "Clear";
@@ -172,6 +207,15 @@ canvas.addEventListener("mouseup", () => {
 
 canvas.addEventListener("mouseleave", () => {
   drawing = false;
+});
+
+canvas.addEventListener("tool-moved", () => {
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  actions.forEach((line) => {
+    if (line.length != null) {
+      line.display(ctx);
+    }
+  });
 });
 
 canvas.addEventListener("drawing-changed", () => {
