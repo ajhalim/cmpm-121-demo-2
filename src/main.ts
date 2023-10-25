@@ -3,11 +3,16 @@ import "./style.css";
 class drag {
   points: { x: number; y: number }[];
   length: number;
+  weight: number;
+  color: string;
 
-  constructor(x?: number, y?: number) {
-    this.points = x && y ? [{ x, y }] : [];
-    this.length = x && y ? 1 : 0;
+  constructor(x: number, y: number, weight: number, color: string) {
+    this.points = [{ x, y }];
+    this.length = 1;
+    this.weight = weight;
+    this.color = color;
   }
+
   // copy constructor
   copyFrom(original: drag) {
     this.points = [...original.points];
@@ -15,9 +20,9 @@ class drag {
   }
 
   display(ctx: CanvasRenderingContext2D) {
-    ctx.lineWidth = 1;
+    ctx.lineWidth = this.weight;
     ctx.lineCap = "round";
-    ctx.strokeStyle = "black";
+    ctx.strokeStyle = this.color;
     const { x, y } = this.points[0];
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -55,6 +60,29 @@ const ctx = canvas.getContext("2d")!;
 ctx.fillStyle = "lightpink";
 ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
+const leftContainer = document.createElement("div");
+leftContainer.id = "left-container";
+
+const buttons = document.createElement("div");
+buttons.id = "button-container";
+
+leftContainer.append(header, canvas, buttons);
+
+const markerTools = document.createElement("div");
+markerTools.id = "marker-tools";
+
+const subhead = document.createElement("h2");
+subhead.innerText = "Marker Tools";
+markerTools.appendChild(subhead);
+
+let drawing = false;
+let hasUndone = false;
+let lineWidth = 1;
+let actions: drag[] = [];
+let redoStack: drag[] = [];
+let penColor = "black";
+const colors = ["black", "red", "blue", "green", "orange", "white", "yellow"];
+
 const clearButton: HTMLButtonElement = document.createElement("button");
 clearButton.innerText = "Clear";
 clearButton.classList.add("button-container");
@@ -64,6 +92,7 @@ clearButton.addEventListener("click", () => {
   redoStack = [];
   somethingChanged();
 });
+buttons.appendChild(clearButton);
 
 const undoButton: HTMLButtonElement = document.createElement("button");
 undoButton.innerText = "Undo";
@@ -72,36 +101,61 @@ undoButton.addEventListener("click", () => {
   if (actions.length != null) {
     redoStack.push(actions.pop()!);
     somethingChanged();
+    hasUndone = true;
   } else {
     return;
   }
 });
+buttons.appendChild(undoButton);
 
 const redoButton: HTMLButtonElement = document.createElement("button");
 redoButton.innerText = "Redo";
 redoButton.classList.add("button-container");
 redoButton.addEventListener("click", () => {
-  if (actions.length != null) {
+  if (actions.length != null && hasUndone == true) {
     actions.push(redoStack.pop()!);
     somethingChanged();
   } else {
     return;
   }
 });
+buttons.appendChild(redoButton);
 
-let drawing = false;
-/* const penStrokes: { xPos: number; yPos: number }[][] = [];
-let currentStroke: { xPos: number; yPos: number }[] = [];
-const redoStack: { xPos: number; yPos: number }[][] = []; */
+const lineWidthButton: HTMLButtonElement = document.createElement("button");
+lineWidthButton.innerText = `${lineWidth}px`;
+lineWidthButton.addEventListener("click", () => {
+  lineWidth = lineWidth < 10 ? lineWidth + 1 : 1;
+  ctx.lineWidth = lineWidth;
+  lineWidthButton.innerText = `${lineWidth}px`;
+});
+buttons.appendChild(lineWidthButton);
 
-let actions: drag[] = [];
-let redoStack: drag[] = [];
+const colorButton: HTMLButtonElement = document.createElement("button");
+colorButton.innerText = `${penColor}`;
+colorButton.addEventListener("click", () => {
+  for (let i = 0; i < colors.length; i++) {
+    if (penColor === colors[i]) {
+      penColor = i < colors.length - 1 ? colors[i + 1] : colors[0];
+      break;
+    }
+  }
+  colorButton.innerText = `${penColor}`;
+  if (penColor === "white" || penColor === "yellow") {
+    colorButton.style.color = "black";
+  } else {
+    colorButton.style.color = "white";
+  }
+  colorButton.style.backgroundColor = penColor;
+});
+buttons.appendChild(colorButton);
+
+markerTools.append(lineWidthButton, colorButton);
 
 canvas.addEventListener("mousedown", (event) => {
   drawing = true;
 
   redoStack.splice(0, redoStack.length);
-  actions.push(new drag(event.offsetX, event.offsetY));
+  actions.push(new drag(event.offsetX, event.offsetY, lineWidth, penColor));
   somethingChanged();
 });
 canvas.addEventListener("mousemove", (event) => {
@@ -129,4 +183,4 @@ canvas.addEventListener("drawing-changed", () => {
   });
 });
 
-app.append(header, canvas, clearButton, undoButton, redoButton);
+app.append(leftContainer, markerTools);
