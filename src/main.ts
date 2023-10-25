@@ -188,7 +188,6 @@ undoButton.addEventListener("click", () => {
   if (actions.length != null) {
     redoStack.push(actions.pop()!);
     somethingChanged("drawing-changed");
-    //hasUndone = true;
   } else {
     return;
   }
@@ -199,9 +198,12 @@ const redoButton: HTMLButtonElement = document.createElement("button");
 redoButton.innerText = "Redo";
 redoButton.classList.add("button-container");
 redoButton.addEventListener("click", () => {
-  if (redoStack.length != null) return;
-  actions.push(redoStack.pop()!);
-  somethingChanged("drawing-changed");
+  if (redoStack.length != null) {
+    actions.push(redoStack.pop()!);
+    somethingChanged("drawing-changed");
+  } else {
+    return;
+  }
 });
 buttons.append(clearButton, undoButton, redoButton);
 
