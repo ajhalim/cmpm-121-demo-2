@@ -52,30 +52,20 @@ class CursorComand {
   display(ctx: CanvasRenderingContext2D) {
     const originalFillStyle = ctx.fillStyle;
     ctx.fillStyle = this.color;
-    ctx.font = `${Math.max(7, this.size)}px monospace`;
+    ctx.font = `${Math.max(10, this.size)}px monospace`;
     if (this.size <= 4) {
-      ctx.fillText("+", this.x - 2, this.y + 3);
+      ctx.fillText("a", this.x - 2, this.y + 3);
     } else {
-      ctx.fillText("+", this.x - 8, this.y + 3);
+      ctx.fillText("a", this.x - 8, this.y + 3);
     }
     ctx.fillStyle = originalFillStyle;
   }
 }
 
-function somethingChanged() {
-  const drawingChangedEvent = new Event("drawing-changed");
-  canvas.dispatchEvent(drawingChangedEvent);
+function somethingChanged(thing: string) {
+  canvas.dispatchEvent(new Event(thing));
+  //canvas.dispatchEvent(drawingChangedEvent);
 }
-
-/* function redraw() {
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  actions.forEach((line) => {
-    if (line.length) {
-      line.display(ctx);
-    }
-  });
-  if (cursorComand) cursorComand.display(ctx);
-} */
 
 const app: HTMLDivElement = document.querySelector("#app")!;
 
@@ -90,6 +80,7 @@ const canvas = document.createElement("canvas");
 canvas.id = "myCanvas";
 canvas.width = canvasWidth;
 canvas.height = canvasHeight;
+canvas.style.cursor = "none";
 const ctx = canvas.getContext("2d")!;
 ctx.fillStyle = "lightpink";
 ctx.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -125,7 +116,7 @@ clearButton.classList.add("button-container");
 clearButton.addEventListener("click", () => {
   actions = [];
   redoStack = [];
-  somethingChanged();
+  somethingChanged("drawing-changed");
 });
 buttons.appendChild(clearButton);
 
@@ -135,7 +126,7 @@ undoButton.classList.add("button-container");
 undoButton.addEventListener("click", () => {
   if (actions.length != null) {
     redoStack.push(actions.pop()!);
-    somethingChanged();
+    somethingChanged("drawing-changed");
     hasUndone = true;
   } else {
     return;
@@ -149,7 +140,7 @@ redoButton.classList.add("button-container");
 redoButton.addEventListener("click", () => {
   if (actions.length != null && hasUndone == true) {
     actions.push(redoStack.pop()!);
-    somethingChanged();
+    somethingChanged("drawing-undone");
   } else {
     return;
   }
@@ -162,6 +153,8 @@ lineWidthButton.addEventListener("click", () => {
   lineWidth = lineWidth < 10 ? lineWidth + 1 : 1;
   ctx.lineWidth = lineWidth;
   lineWidthButton.innerText = `${lineWidth}px`;
+  if (cursorComand) cursorComand.size = lineWidth;
+  somethingChanged("tool-moved");
 });
 buttons.appendChild(lineWidthButton);
 
@@ -186,20 +179,26 @@ buttons.appendChild(colorButton);
 
 markerTools.append(lineWidthButton, colorButton);
 
-canvas.addEventListener("mousedown", (event) => {
+canvas.addEventListener("mousedown", (e) => {
+  console.log("down");
   drawing = true;
+  //start new line with fist point
+  actions.push(new drag(e.offsetX, e.offsetY, lineWidth, penColor));
+  redoStack = [];
+});
 
-  redoStack.splice(0, redoStack.length);
-  actions.push(new drag(event.offsetX, event.offsetY, lineWidth, penColor));
-  somethingChanged();
-});
-canvas.addEventListener("mousemove", (event) => {
+canvas.addEventListener("mousemove", (e) => {
   if (drawing) {
-    actions[actions.length - 1].extend(event.offsetX, event.offsetY);
+    cursorComand = null;
+    console.log("draw");
+    actions[actions.length - 1].extend(e.offsetX, e.offsetY);
     actions[actions.length - 1].display(ctx);
-    redoStack = [];
+    cursorComand = new CursorComand(e.offsetX, e.offsetY, lineWidth, penColor);
   }
+  cursorComand = new CursorComand(e.offsetX, e.offsetY, lineWidth, penColor);
+  somethingChanged("tool-moved");
 });
+
 canvas.addEventListener("mouseup", () => {
   drawing = false;
   //currentStroke = [];
@@ -209,6 +208,11 @@ canvas.addEventListener("mouseleave", () => {
   drawing = false;
 });
 
+canvas.addEventListener("mouseenter", (e) => {
+  cursorComand = new CursorComand(e.offsetX, e.offsetY, lineWidth, penColor);
+  somethingChanged("tool-moved");
+});
+
 canvas.addEventListener("tool-moved", () => {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   actions.forEach((line) => {
@@ -216,6 +220,7 @@ canvas.addEventListener("tool-moved", () => {
       line.display(ctx);
     }
   });
+  if (cursorComand) cursorComand.display(ctx);
 });
 
 canvas.addEventListener("drawing-changed", () => {
@@ -225,6 +230,7 @@ canvas.addEventListener("drawing-changed", () => {
       line.display(ctx);
     }
   });
+  if (cursorComand) cursorComand.display(ctx);
 });
 
 app.append(leftContainer, markerTools);
