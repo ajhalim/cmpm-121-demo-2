@@ -145,7 +145,7 @@ subhead.innerText = "Marker Tools";
 markerTools.appendChild(subhead);
 
 let drawing = false;
-let hasUndone = false;
+//let hasUndone = false;
 let lineWidth = 1;
 let actions: (StickerCommand | drag)[] = [];
 let redoStack: (StickerCommand | drag)[] = [];
@@ -188,7 +188,7 @@ undoButton.addEventListener("click", () => {
   if (actions.length != null) {
     redoStack.push(actions.pop()!);
     somethingChanged("drawing-changed");
-    hasUndone = true;
+    //hasUndone = true;
   } else {
     return;
   }
