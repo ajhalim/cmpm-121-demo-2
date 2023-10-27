@@ -119,6 +119,7 @@ document.title = gameName;
 const header = document.createElement("h1");
 header.innerHTML = gameName;
 
+const customWidth = 1024;
 const canvasWidth = 256;
 const canvasHeight = 256;
 const canvas = document.createElement("canvas");
@@ -281,6 +282,27 @@ customButton.addEventListener("click", () => {
     somethingChanged("tool-moved");
   }
 });
+
+const exportButton: HTMLButtonElement = document.createElement("button");
+exportButton.innerText = "export";
+exportButton.addEventListener("click", () => {
+  //create high res copy of current canvas scaled up X4
+  const tempCanvas = document.createElement("canvas");
+  tempCanvas.width = customWidth;
+  tempCanvas.height = customWidth;
+  const tempCtx = tempCanvas.getContext("2d")!;
+  tempCtx.fillStyle = "beige";
+  tempCtx.fillRect(0, 0, customWidth, customWidth);
+  tempCtx.scale(2, 2);
+  actions.forEach((action) => action.display(tempCtx));
+  // export temp canvas
+  const anchor = document.createElement("a");
+  anchor.href = tempCanvas.toDataURL("image/png");
+  anchor.download = "sketchpad.png";
+  anchor.click();
+  tempCanvas.remove();
+});
+buttons.append(clearButton, undoButton, redoButton, exportButton);
 
 buttons.appendChild(colorButton);
 
