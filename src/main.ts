@@ -40,7 +40,6 @@ class CursorComand {
     this.y = y;
     this.size = size * 4;
     this.color = color;
-    //this.sticker = sticker;
   }
   display(ctx: CanvasRenderingContext2D) {
     const originalFillStyle = ctx.fillStyle;
@@ -48,9 +47,9 @@ class CursorComand {
     if (this.color) {
       ctx.fillStyle = this.color;
       if (this.size <= 4) {
-        ctx.fillText("+", this.x - 2, this.y + 3);
+        ctx.fillText("doodle", this.x - 2, this.y + 3);
       } else {
-        ctx.fillText("+", this.x - 8, this.y + 3);
+        ctx.fillText("doodle", this.x - 8, this.y + 3);
       }
     }
     ctx.fillStyle = originalFillStyle;
@@ -100,13 +99,13 @@ function redraw() {
     stickerCommand.display(ctx);
   }
   // display pen cursor if selected
-  if (penColor && cursorComand) {
+  if (doodlerColor && cursorComand) {
     cursorComand.display(ctx);
   }
 }
 
 function disablePen() {
-  penColor = null;
+  doodlerColor = null;
   colorButton.style.backgroundColor = colors[0];
   colorButton.style.color = "white";
   colorButton.innerText = `marker`;
@@ -143,7 +142,7 @@ const markerTools = document.createElement("div");
 markerTools.id = "marker-tools";
 
 const subhead = document.createElement("h2");
-subhead.innerText = "Marker Tools";
+subhead.innerText = "Doodler Tools";
 markerTools.appendChild(subhead);
 
 let drawing = false;
@@ -156,7 +155,7 @@ const colors = ["black", "red", "blue", "green", "orange", "white", "yellow"];
 let currentSticker: string | null = null;
 let cursorComand: CursorComand | null = null;
 let stickerCommand: StickerCommand | null = null;
-let penColor: string | null = colors[0];
+let doodlerColor: string | null = colors[0];
 
 const stickers = [
   "🐱",
@@ -221,29 +220,29 @@ lineWidthButton.addEventListener("click", () => {
 buttons.appendChild(lineWidthButton);
 
 const colorButton: HTMLButtonElement = document.createElement("button");
-colorButton.innerText = `${penColor}`;
+colorButton.innerText = `${doodlerColor}`;
 colorButton.addEventListener("click", () => {
-  if (penColor) {
+  if (doodlerColor) {
     for (let i = 0; i < colors.length; i++) {
-      if (penColor === colors[i]) {
-        penColor = i < colors.length - 1 ? colors[i + 1] : colors[0];
+      if (doodlerColor === colors[i]) {
+        doodlerColor = i < colors.length - 1 ? colors[i + 1] : colors[0];
         break;
       }
     }
-    colorButton.innerText = `${penColor}`;
-    if (penColor === "white" || penColor === "yellow") {
+    colorButton.innerText = `${doodlerColor}`;
+    if (doodlerColor === "white" || doodlerColor === "yellow") {
       colorButton.style.color = "black";
     } else {
       colorButton.style.color = "white";
     }
-    colorButton.style.backgroundColor = penColor;
+    colorButton.style.backgroundColor = doodlerColor;
   } else {
     //disable stickers pen
     currentSticker = null;
     stickerButton.innerText = "stickers";
     // enable marker pen / pen colors button
-    penColor = colors[0];
-    colorButton.innerText = `${penColor}`;
+    doodlerColor = colors[0];
+    colorButton.innerText = `${doodlerColor}`;
   }
 });
 
@@ -316,7 +315,7 @@ canvas.addEventListener("mousedown", (e) => {
       new StickerCommand(currentSticker, e.offsetX, e.offsetY, lineWidth)
     );
   } else {
-    actions.push(new drag(e.offsetX, e.offsetY, lineWidth, penColor!));
+    actions.push(new drag(e.offsetX, e.offsetY, lineWidth, doodlerColor!));
   }
   redoStack = [];
 });
@@ -338,8 +337,13 @@ canvas.addEventListener("mousemove", (e) => {
       lineWidth
     );
     // use pen as cursor
-  } else if (penColor) {
-    cursorComand = new CursorComand(e.offsetX, e.offsetY, lineWidth, penColor);
+  } else if (doodlerColor) {
+    cursorComand = new CursorComand(
+      e.offsetX,
+      e.offsetY,
+      lineWidth,
+      doodlerColor
+    );
   }
   somethingChanged("tool-moved");
 });
@@ -356,8 +360,13 @@ canvas.addEventListener("mouseleave", () => {
   somethingChanged("tool-moved");
 });
 
-canvas.addEventListener("mouseenter", (e) => {
-  cursorComand = new CursorComand(e.offsetX, e.offsetY, lineWidth, penColor);
+canvas.addEventListener("mouseenter", (event) => {
+  cursorComand = new CursorComand(
+    event.offsetX,
+    event.offsetY,
+    lineWidth,
+    doodlerColor
+  );
   somethingChanged("tool-moved");
 });
 
