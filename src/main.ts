@@ -40,6 +40,7 @@ class CursorComand {
     this.y = y;
     this.size = size * 4;
     this.color = color;
+    //this.sticker = sticker;
   }
   display(ctx: CanvasRenderingContext2D) {
     const originalFillStyle = ctx.fillStyle;
@@ -47,9 +48,9 @@ class CursorComand {
     if (this.color) {
       ctx.fillStyle = this.color;
       if (this.size <= 4) {
-        ctx.fillText("doodle", this.x - 2, this.y + 3);
+        ctx.fillText("+", this.x - 2, this.y + 3);
       } else {
-        ctx.fillText("doodle", this.x - 8, this.y + 3);
+        ctx.fillText("+", this.x - 8, this.y + 3);
       }
     }
     ctx.fillStyle = originalFillStyle;
@@ -62,18 +63,30 @@ class StickerCommand {
   y: number;
   size: number;
   length: number;
-  constructor(sticker: string, x: number, y: number, size: number) {
+  degree: number;
+  constructor(
+    sticker: string,
+    x: number,
+    y: number,
+    size: number,
+    degree: number
+  ) {
     this.sticker = sticker;
     this.x = x;
     this.y = y;
     this.size = size * 20;
     this.length = 1;
+    this.degree = degree;
   }
   display(ctx: CanvasRenderingContext2D) {
     const originalFillStyle = ctx.fillStyle;
     ctx.fillStyle = "black";
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    if (this.degree > 0) ctx.rotate((this.degree * Math.PI) / 180);
     ctx.font = `${Math.max(7, this.size)}px monospace`;
-    ctx.fillText(this.sticker, this.x, this.y);
+    ctx.fillText(this.sticker, 0, 0);
+    ctx.restore();
     ctx.fillStyle = originalFillStyle;
   }
   extend(x: number, y: number) {
@@ -99,13 +112,13 @@ function redraw() {
     stickerCommand.display(ctx);
   }
   // display pen cursor if selected
-  if (doodlerColor && cursorComand) {
+  if (penColor && cursorComand) {
     cursorComand.display(ctx);
   }
 }
 
 function disablePen() {
-  doodlerColor = null;
+  penColor = null;
   colorButton.style.backgroundColor = colors[0];
   colorButton.style.color = "white";
   colorButton.innerText = `marker`;
@@ -138,12 +151,15 @@ buttons.id = "button-container";
 
 leftContainer.append(header, canvas, buttons);
 
-const markerTools = document.createElement("div");
+const markerTools: HTMLDivElement = document.createElement("div");
 markerTools.id = "marker-tools";
 
 const subhead = document.createElement("h2");
-subhead.innerText = "Doodler Tools";
+subhead.innerText = "Marker Tools";
 markerTools.appendChild(subhead);
+
+const rotationTools: HTMLDivElement = document.createElement("div");
+rotationTools.id = "rotation-tools";
 
 let drawing = false;
 //let hasUndone = false;
@@ -155,7 +171,8 @@ const colors = ["black", "red", "blue", "green", "orange", "white", "yellow"];
 let currentSticker: string | null = null;
 let cursorComand: CursorComand | null = null;
 let stickerCommand: StickerCommand | null = null;
-let doodlerColor: string | null = colors[0];
+let penColor: string | null = colors[0];
+let currentRotation = 0;
 
 const stickers = [
   "🐱",
@@ -220,29 +237,29 @@ lineWidthButton.addEventListener("click", () => {
 buttons.appendChild(lineWidthButton);
 
 const colorButton: HTMLButtonElement = document.createElement("button");
-colorButton.innerText = `${doodlerColor}`;
+colorButton.innerText = `${penColor}`;
 colorButton.addEventListener("click", () => {
-  if (doodlerColor) {
+  if (penColor) {
     for (let i = 0; i < colors.length; i++) {
-      if (doodlerColor === colors[i]) {
-        doodlerColor = i < colors.length - 1 ? colors[i + 1] : colors[0];
+      if (penColor === colors[i]) {
+        penColor = i < colors.length - 1 ? colors[i + 1] : colors[0];
         break;
       }
     }
-    colorButton.innerText = `${doodlerColor}`;
-    if (doodlerColor === "white" || doodlerColor === "yellow") {
+    colorButton.innerText = `${penColor}`;
+    if (penColor === "white" || penColor === "yellow") {
       colorButton.style.color = "black";
     } else {
       colorButton.style.color = "white";
     }
-    colorButton.style.backgroundColor = doodlerColor;
+    colorButton.style.backgroundColor = penColor;
   } else {
     //disable stickers pen
     currentSticker = null;
     stickerButton.innerText = "stickers";
     // enable marker pen / pen colors button
-    doodlerColor = colors[0];
-    colorButton.innerText = `${doodlerColor}`;
+    penColor = colors[0];
+    colorButton.innerText = `${penColor}`;
   }
 });
 
@@ -259,7 +276,9 @@ stickerButton.addEventListener("click", () => {
       }
     }
   } else {
-    disablePen();
+    // enable sticker button
+    currentSticker = stickers[0];
+    disablePen(); //reset color button
   }
 
   stickerButton.innerText = currentSticker ? currentSticker : stickers[0];
@@ -301,21 +320,53 @@ exportButton.addEventListener("click", () => {
   anchor.click();
   tempCanvas.remove();
 });
+
 buttons.append(clearButton, undoButton, redoButton, exportButton);
 
 buttons.appendChild(colorButton);
 
-markerTools.append(lineWidthButton, colorButton, stickerButton, customButton);
+markerTools.append(
+  lineWidthButton,
+  colorButton,
+  stickerButton,
+  customButton,
+  rotationTools
+);
+
+const rotationSlider = document.createElement("input");
+rotationSlider.type = "range";
+rotationSlider.min = "0";
+rotationSlider.max = "360";
+rotationSlider.step = "1";
+rotationSlider.value = "0";
+
+// Create a span element to display the slider value
+const sliderValue = document.createElement("span");
+sliderValue.textContent = rotationSlider.value + "°";
+
+// Add an event listener to the slider
+rotationSlider.addEventListener("input", () => {
+  currentRotation = parseInt(rotationSlider.value);
+  sliderValue.textContent = `${currentRotation} °`;
+  // You can perform additional actions based on the slider value here
+});
+rotationTools.append("Sticker Rotation:", rotationSlider, sliderValue);
 
 canvas.addEventListener("mousedown", (e) => {
   console.log("down");
   drawing = true;
   if (currentSticker) {
     actions.push(
-      new StickerCommand(currentSticker, e.offsetX, e.offsetY, lineWidth)
+      new StickerCommand(
+        currentSticker,
+        e.offsetX,
+        e.offsetY,
+        lineWidth,
+        currentRotation
+      )
     );
   } else {
-    actions.push(new drag(e.offsetX, e.offsetY, lineWidth, doodlerColor!));
+    actions.push(new drag(e.offsetX, e.offsetY, lineWidth, penColor!));
   }
   redoStack = [];
 });
@@ -334,16 +385,12 @@ canvas.addEventListener("mousemove", (e) => {
       currentSticker,
       e.offsetX,
       e.offsetY,
-      lineWidth
+      lineWidth,
+      currentRotation
     );
     // use pen as cursor
-  } else if (doodlerColor) {
-    cursorComand = new CursorComand(
-      e.offsetX,
-      e.offsetY,
-      lineWidth,
-      doodlerColor
-    );
+  } else if (penColor) {
+    cursorComand = new CursorComand(e.offsetX, e.offsetY, lineWidth, penColor);
   }
   somethingChanged("tool-moved");
 });
@@ -360,13 +407,8 @@ canvas.addEventListener("mouseleave", () => {
   somethingChanged("tool-moved");
 });
 
-canvas.addEventListener("mouseenter", (event) => {
-  cursorComand = new CursorComand(
-    event.offsetX,
-    event.offsetY,
-    lineWidth,
-    doodlerColor
-  );
+canvas.addEventListener("mouseenter", (e) => {
+  cursorComand = new CursorComand(e.offsetX, e.offsetY, lineWidth, penColor);
   somethingChanged("tool-moved");
 });
 
