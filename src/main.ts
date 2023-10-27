@@ -309,7 +309,7 @@ exportButton.addEventListener("click", () => {
   tempCanvas.width = customWidth;
   tempCanvas.height = customWidth;
   const tempCtx = tempCanvas.getContext("2d")!;
-  tempCtx.fillStyle = "beige";
+  tempCtx.fillStyle = "lightpink";
   tempCtx.fillRect(0, 0, customWidth, customWidth);
   tempCtx.scale(2, 2);
   actions.forEach((action) => action.display(tempCtx));
