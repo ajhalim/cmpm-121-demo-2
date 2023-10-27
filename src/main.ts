@@ -35,26 +35,17 @@ class CursorComand {
   y: number;
   size: number;
   color: string | null;
-  sticker: string | null;
-  constructor(
-    x: number,
-    y: number,
-    size: number,
-    color: string | null,
-    sticker: string | null
-  ) {
+  constructor(x: number, y: number, size: number, color: string | null) {
     this.x = x;
     this.y = y;
     this.size = size * 4;
     this.color = color;
-    this.sticker = sticker;
+    //this.sticker = sticker;
   }
   display(ctx: CanvasRenderingContext2D) {
     const originalFillStyle = ctx.fillStyle;
     ctx.font = `${Math.max(7, this.size)}px monospace`;
-    if (this.sticker) {
-      ctx.fillText(this.sticker, this.x, this.y);
-    } else if (this.color) {
+    if (this.color) {
       ctx.fillStyle = this.color;
       if (this.size <= 4) {
         ctx.fillText("+", this.x - 2, this.y + 3);
@@ -80,8 +71,11 @@ class StickerCommand {
     this.length = 1;
   }
   display(ctx: CanvasRenderingContext2D) {
+    const originalFillStyle = ctx.fillStyle;
+    ctx.fillStyle = "black";
     ctx.font = `${Math.max(7, this.size)}px monospace`;
     ctx.fillText(this.sticker, this.x, this.y);
+    ctx.fillStyle = originalFillStyle;
   }
   extend(x: number, y: number) {
     this.x = x;
@@ -109,6 +103,13 @@ function redraw() {
   if (penColor && cursorComand) {
     cursorComand.display(ctx);
   }
+}
+
+function disablePen() {
+  penColor = null;
+  colorButton.style.backgroundColor = colors[0];
+  colorButton.style.color = "white";
+  colorButton.innerText = `marker`;
 }
 
 const app: HTMLDivElement = document.querySelector("#app")!;
@@ -258,22 +259,32 @@ stickerButton.addEventListener("click", () => {
       }
     }
   } else {
-    // enable sticker pen
-    currentSticker = stickers[0];
-    //disable pen colors button
-    penColor = null;
-    colorButton.style.backgroundColor = colors[0];
-    colorButton.style.color = "white";
-    colorButton.innerText = `marker`;
+    disablePen();
   }
 
   stickerButton.innerText = currentSticker ? currentSticker : stickers[0];
   somethingChanged("tool-moved");
 });
 
+const customButton: HTMLButtonElement = document.createElement("button");
+customButton.innerText = "custom sticker";
+customButton.addEventListener("click", () => {
+  const input: string | null = window.prompt(
+    "Input a custom sticker: ",
+    undefined
+  );
+  if (input) {
+    stickers.push(input);
+    currentSticker = input;
+    disablePen();
+    stickerButton.innerText = currentSticker;
+    somethingChanged("tool-moved");
+  }
+});
+
 buttons.appendChild(colorButton);
 
-markerTools.append(lineWidthButton, colorButton, stickerButton);
+markerTools.append(lineWidthButton, colorButton, stickerButton, customButton);
 
 canvas.addEventListener("mousedown", (e) => {
   console.log("down");
@@ -306,13 +317,7 @@ canvas.addEventListener("mousemove", (e) => {
     );
     // use pen as cursor
   } else if (penColor) {
-    cursorComand = new CursorComand(
-      e.offsetX,
-      e.offsetY,
-      lineWidth,
-      penColor,
-      currentSticker
-    );
+    cursorComand = new CursorComand(e.offsetX, e.offsetY, lineWidth, penColor);
   }
   somethingChanged("tool-moved");
 });
@@ -324,16 +329,13 @@ canvas.addEventListener("mouseup", () => {
 
 canvas.addEventListener("mouseleave", () => {
   drawing = false;
+  stickerCommand = null;
+  cursorComand = null;
+  somethingChanged("tool-moved");
 });
 
 canvas.addEventListener("mouseenter", (e) => {
-  cursorComand = new CursorComand(
-    e.offsetX,
-    e.offsetY,
-    lineWidth,
-    penColor,
-    currentSticker
-  );
+  cursorComand = new CursorComand(e.offsetX, e.offsetY, lineWidth, penColor);
   somethingChanged("tool-moved");
 });
 
